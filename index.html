@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Santa Dash: Ultra Edition</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎅</text></svg>">
+<style>
+    :root {
+        --neon-blue: #00f2ff;
+        --neon-red: #ff2e63;
+        --glass: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #02040a;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        touch-action: none;
+        user-select: none;
+        color: white;
+    }
+
+    canvas { display: block; }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, rgba(10, 20, 50, 0.8), rgba(2, 4, 10, 0.95));
+        backdrop-filter: blur(20px);
+        z-index: 2000;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hidden { opacity: 0; pointer-events: none; transform: scale(0.9); }
+
+    .menu-card {
+        width: 90%;
+        max-width: 400px;
+        padding: 40px;
+        border-radius: 40px;
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        text-align: center;
+    }
+
+    h1 {
+        font-size: clamp(40px, 10vw, 60px);
+        margin: 0 0 10px 0;
+        background: linear-gradient(to bottom, #fff, var(--neon-blue));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
+        letter-spacing: -2px;
+    }
+
+    .subtitle {
+        color: var(--neon-red);
+        font-weight: 800;
+        letter-spacing: 4px;
+        font-size: 12px;
+        margin-bottom: 40px;
+    }
+
+    .btn-group { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+
+    .btn {
+        padding: 18px;
+        font-size: 16px;
+        font-weight: 700;
+        color: white;
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        outline: none; /* Hide focus rings */
+    }
+
+    .btn:hover { background: rgba(255,255,255,0.1); border-color: var(--neon-blue); transform: translateY(-2px); }
+    .btn-primary { background: var(--neon-blue); color: #000; border: none; }
+    .btn-primary:hover { box-shadow: 0 0 25px var(--neon-blue); background: #fff; }
+
+    .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 0;
+        text-align: left;
+    }
+
+    label { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.6); }
+
+    select {
+        background: #111;
+        color: white;
+        border: 1px solid var(--glass-border);
+        padding: 8px;
+        border-radius: 10px;
+        outline: none;
+    }
+
+    #hud {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: 0.5s;
+    }
+
+    .stat {
+        background: var(--glass);
+        padding: 12px 20px;
+        border-radius: 15px;
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+        font-weight: 900;
+    }
+
+    #controls {
+        position: fixed;
+        bottom: 30px;
+        left: 0; right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 30px;
+        pointer-events: none;
+        opacity: 0;
+        transition: 0.5s;
+    }
+
+    .ctrl-btn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--glass);
+        border: 2px solid white;
+        color: white;
+        font-size: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+    }
+
+    #toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--neon-blue);
+        color: black;
+        padding: 12px 30px;
+        border-radius: 50px;
+        font-weight: 700;
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 3000;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="menu-main" class="overlay">
+    <div class="menu-card">
+        <div class="subtitle">ULTRA EDITION</div>
+        <h1>SANTA DASH</h1>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="changeState('game')">Start Dash</button>
+            <button class="btn" onclick="changeState('options')">Options</button>
+            <button class="btn" style="background: #25d366; color: white; border: none;" onclick="smartShare('game')">Share Game</button>
+        </div>
+    </div>
+</div>
+
+<div id="menu-options" class="overlay hidden">
+    <div class="menu-card">
+        <h2 style="margin-top:0">SETTINGS</h2>
+        <div class="setting-row">
+            <label>Difficulty</label>
+            <select id="diff-set">
+                <option value="5">Casual</option>
+                <option value="8">Pro</option>
+                <option value="12">Insane</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Graphics</label>
+            <select id="gfx-set">
+                <option value="low">Low</option>
+                <option value="mid">Ultra</option>
+            </select>
+        </div>
+        <div class="btn-group" style="margin-top:30px">
+            <button class="btn btn-primary" onclick="saveOptions()">Save & Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="menu-over" class="overlay hidden">
+    <div class="menu-card">
+        <h1 style="color:var(--neon-red); -webkit-text-fill-color: var(--neon-red)">CRASHED</h1>
+        <p id="final-score" style="font-size: 24px; margin: 20px 0"></p>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="resetGame()">Try Again</button>
+            <button class="btn" style="background: #25d366; color: white; border: none;" onclick="smartShare('score')">Share Score</button>
+            <button class="btn" onclick="location.reload()">Main Menu</button>
+        </div>
+    </div>
+</div>
+
+<div id="hud">
+    <div class="stat">SCORE: <span id="score-val" style="color:var(--neon-blue)">0</span></div>
+    <div class="stat" id="lvl-val">LVL 1</div>
+</div>
+
+<div id="controls">
+    <div class="ctrl-btn" id="lBtn">◀</div>
+    <div class="ctrl-btn" id="rBtn">▶</div>
+</div>
+
+<div id="toast">Message Copied!</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let config = { speed: 8, particles: 'mid' };
+const savedConfig = localStorage.getItem('santaDash_cfg');
+if(savedConfig) {
+    config = JSON.parse(savedConfig);
+    document.getElementById('diff-set').value = config.speed;
+    document.getElementById('gfx-set').value = config.particles;
+}
+
+let state = 'menu'; 
+let score = 0, level = 1, gameSpeed = config.speed;
+let santaLane = 1, currentX = 0, targetX = 0;
+let obstacles = [], particles = [];
+const emojis = ["🎄", "⛄", "🎁", "🌩️", "🧊"];
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    updateTarget();
+    if(currentX === 0) currentX = targetX;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function changeState(newState) {
+    document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+    if(document.activeElement) document.activeElement.blur(); // FIX: Prevent spacebar clicking button again
+
+    if(newState === 'game') {
+        document.getElementById('hud').style.opacity = '1';
+        document.getElementById('controls').style.opacity = '1';
+        state = 'game';
+        gameSpeed = config.speed;
+    } else if(newState === 'options') {
+        document.getElementById('menu-options').classList.remove('hidden');
+    } else if(newState === 'menu') {
+        document.getElementById('menu-main').classList.remove('hidden');
+    }
+}
+
+function saveOptions() {
+    config.speed = parseInt(document.getElementById('diff-set').value);
+    config.particles = document.getElementById('gfx-set').value;
+    localStorage.setItem('santaDash_cfg', JSON.stringify(config));
+    changeState('menu');
+}
+
+function resetGame() {
+    if(document.activeElement) document.activeElement.blur(); // FIX: Remove focus
+    score = 0; level = 1; gameSpeed = config.speed; santaLane = 1;
+    updateTarget(); currentX = targetX; obstacles = [];
+    document.getElementById('score-val').innerText = "0";
+    document.getElementById('lvl-val').innerText = "LVL 1";
+    changeState('game');
+}
+
+function smartShare(type) {
+    if(document.activeElement) document.activeElement.blur();
+    let msg = type === 'game' ? 
+        `Check out this new game called Santa Dash! \n\nhttps://derrickrichard.github.io/santadash/` : 
+        `I just got a score of ${score} on the new game Santa Dash! Can you beat it?\n\nhttps://derrickrichard.github.io/santadash/`;
+
+    if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        navigator.share({ title: 'Santa Dash', text: msg }).catch(() => copyFallback(msg));
+    } else {
+        copyFallback(msg);
+    }
+}
+
+function copyFallback(text) {
+    navigator.clipboard.writeText(text);
+    const t = document.getElementById('toast');
+    t.innerText = "Message & Link Copied!";
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => t.style.transform = 'translateX(-50%) translateY(100px)', 2500);
+}
+
+// Controls
+function updateTarget() { targetX = (santaLane * (canvas.width / 3)) + (canvas.width / 6); }
+document.getElementById('lBtn').onmousedown = () => { if(santaLane > 0) santaLane--; updateTarget(); };
+document.getElementById('rBtn').onmousedown = () => { if(santaLane < 2) santaLane++; updateTarget(); };
+
+window.addEventListener('keydown', (e) => {
+    // FIX: Stop Spacebar from scrolling or clicking buttons
+    if(e.code === "Space") e.preventDefault(); 
+    
+    if(e.key === "ArrowLeft" && santaLane > 0) { e.preventDefault(); santaLane--; }
+    if(e.key === "ArrowRight" && santaLane < 2) { e.preventDefault(); santaLane++; }
+    updateTarget();
+});
+
+class Particle {
+    constructor(x, y, isTrail = false) {
+        this.x = x; this.y = y;
+        this.size = isTrail ? Math.random()*10 : Math.random()*3;
+        this.vy = isTrail ? 2 : Math.random()*3 + gameSpeed;
+        this.alpha = 1;
+        this.isTrail = isTrail;
+    }
+    draw() {
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = "white";
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+function update() {
+    ctx.fillStyle = '#02040a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if(Math.random() < (config.particles === 'mid' ? 0.6 : 0.2)) 
+        particles.push(new Particle(Math.random()*canvas.width, -10));
+
+    particles.forEach((p, i) => {
+        p.y += p.vy;
+        if(p.isTrail) p.alpha -= 0.04;
+        p.draw();
+        if(p.y > canvas.height || p.alpha <= 0) particles.splice(i, 1);
+    });
+
+    if(state === 'game') {
+        currentX += (targetX - currentX) * 0.15;
+        if(Math.random() < 0.02 + (level*0.005)) {
+            let l = Math.floor(Math.random()*3);
+            obstacles.push({ x: (l*(canvas.width/3))+(canvas.width/6), y: -100, char: emojis[Math.floor(Math.random()*emojis.length)] });
+        }
+        obstacles.forEach((o, i) => {
+            o.y += gameSpeed;
+            ctx.font = "60px Arial"; ctx.textAlign = "center";
+            ctx.shadowBlur = 15; ctx.shadowColor = "white";
+            ctx.fillText(o.char, o.x, o.y);
+            ctx.shadowBlur = 0;
+            if(Math.abs(o.y - (canvas.height-120)) < 50 && Math.abs(o.x - currentX) < 40) {
+                state = 'over';
+                document.getElementById('menu-over').classList.remove('hidden');
+                document.getElementById('final-score').innerText = "SCORE: " + score;
+            }
+            if(o.y > canvas.height + 100) {
+                obstacles.splice(i, 1); score += 10;
+                document.getElementById('score-val').innerText = score;
+                if(score % 100 === 0) { level++; gameSpeed += 0.8; document.getElementById('lvl-val').innerText = "LVL " + level; }
+            }
+        });
+        ctx.shadowBlur = 30; ctx.shadowColor = "#ff2e63";
+        ctx.font = "80px Arial"; ctx.fillText("🎅", currentX, canvas.height - 100);
+        ctx.shadowBlur = 0;
+        particles.push(new Particle(currentX + (Math.random()-0.5)*40, canvas.height - 90, true));
+    }
+    requestAnimationFrame(update);
+}
+update();
+</script>
+</body>
+</html>
